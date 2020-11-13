@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {makeStyles} from '@material-ui/core/styles';
 import Typography from "@material-ui/core/Typography";
+import Button from "@material-ui/core/Button";
 import axios from 'axios';
 
 const useStyles = makeStyles((theme) => ({
@@ -18,51 +19,34 @@ type CSVFileImportProps = {
 export default function CSVFileImport({url, title}: CSVFileImportProps) {
   const classes = useStyles();
   const [file, setFile] = useState<any>();
-  const [uploadUrl, setUploadUrl] = useState<any>();
-
-  const createFile = (file: any) => {
-    let reader = new FileReader()
-    reader.onload = (e: any) => {
-      console.log(e.target.result);
-      setFile(e.target.result);
-    }
-    reader.readAsDataURL(file)
-  };
 
   const onFileChange = (e: any) => {
-    console.log(e);
     let files = e.target.files || e.dataTransfer.files
     if (!files.length) return
-    createFile(files[0])
+      setFile(files[0])
   };
 
   const removeFile = () => {
-    setFile('');
+    setFile(null);
   };
 
   const uploadFile = async (e: any) => {
       // Get the presigned URL
       const response = await axios({
         method: 'GET',
-        url
+        url: `${url}/?name=${encodeURIComponent(file.name)}`
       })
-      console.log('Response: ', response.data)
+      const signedUrl = response.data
+      console.log('Response: ', signedUrl)
       console.log('Uploading: ', file)
-      let binary = atob(file.split(',')[1])
-      let array = []
-      for (var i = 0; i < binary.length; i++) {
-        array.push(binary.charCodeAt(i))
-      }
-      let blobData = new Blob([new Uint8Array(array)], {type: 'text/plain'})
-      console.log('Uploading to: ', response.data.uploadURL)
-      const result = await fetch(response.data.uploadURL, {
+
+      const result = await fetch(signedUrl, {
         method: 'PUT',
-        body: blobData
+        body: file,
+        headers: {'Content-Type': 'text/csv'}
       })
       console.log('Result: ', result)
-      // Final URL for the user doesn't need the query string params
-      setUploadUrl(response.data.uploadURL.split('?')[0]);
-      setFile('');
+      setFile(null);
     }
   ;
 
@@ -75,8 +59,8 @@ export default function CSVFileImport({url, title}: CSVFileImportProps) {
           <input type="file" onChange={onFileChange}/>
       ) : (
         <div>
-          {!uploadUrl && <button onClick={removeFile}>Remove file</button>}
-          {!uploadUrl && <button onClick={uploadFile}>Upload file</button>}
+          <Button onClick={removeFile} color="secondary">Remove file</Button>
+          <Button onClick={uploadFile} color="primary">Upload file</Button>
         </div>
       )}
     </div>
